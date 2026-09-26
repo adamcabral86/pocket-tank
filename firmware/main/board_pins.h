@@ -4,6 +4,27 @@
  * SDA=15/SCL=14, the Arduino variant says the reverse. */
 #ifndef BOARD_PINS_H
 #define BOARD_PINS_H
+#include "sdkconfig.h"
+
+#if CONFIG_POCKET_TANK_BOARD_CYD28
+/* The 2.8" ESP32-S3 CYD, ES3C28P (lcdwiki.com, ES3C28P_ES2N28P_Specification_V1.0
+ * section 4.2). A stock board, no modifications: everything below is as the
+ * vendor wires it. The LCD's reset is CHIP_PU - it resets with the chip, so
+ * there is no reset pin to drive. */
+#define PIN_LCD_CS        10
+#define PIN_LCD_DC        46       /* high = data, low = command */
+#define PIN_LCD_SCLK      12
+#define PIN_LCD_MOSI      11
+#define PIN_LCD_MISO      13
+#define PIN_LCD_BL        45       /* high = backlight on; PWM for brightness */
+#define PIN_I2C_SDA       16       /* shared: touch, audio codec, the I2C socket */
+#define PIN_I2C_SCL       15
+#define PIN_TP_RST        18       /* low = reset */
+#define PIN_TP_INT        17       /* low while touched (the port polls instead) */
+#define I2C_ADDR_FT6336   0x38
+#define PANEL_W           240      /* native portrait; the panel scans landscape (MADCTL) */
+#define PANEL_H           320
+#else
 #define PIN_LCD_CS        12
 #define PIN_LCD_PCLK      11
 #define PIN_LCD_DATA0     4
@@ -19,4 +40,5 @@
 #define PANEL_W           368      /* native portrait */
 #define PANEL_H           448
 #define V2_PANEL_X_GAP    0x10
+#endif  /* board */
 #endif
