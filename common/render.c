@@ -2722,8 +2722,26 @@ void render_notice(const tank_t *t, uint16_t *fb, int stride, int kind, int fish
  * modal of the sources. The page dims under a modal like the milestones
  * page. Fingers land low here too: the row bands run 8 px above and to the
  * next row, the buttons' bands to the glass edge. */
+#if UI_COMPACT
+/* The CYD's 240 px: the 32 px coin for the 64 px one (the header is a row
+ * shorter), rows at a 38 px pitch, the buttons from the glass's own edge. */
+#define SHP_COIN_ART  (&icon_ms_sand_dollar)
+#define SHP_COIN_X    8
+#define SHP_COIN_Y    6
+#define SHP_TEXT_X    50             /* each row's name and price, under the header's words */
+#define SHP_ROW_Y0    56
+#define SHP_ROW_DY    38
+#define SHP_ROW_ICON  32
+#define SHP_BTN_W     76
+#define SHP_BTN_X     (TANK_W - 8 - SHP_BTN_W)
+#define SHP_BTN_H     24
+#define SHP_EARN_X    8
+#define SHP_EARN_W    96
+#else
+#define SHP_COIN_ART  (&icon_shop_sand_dollar_64)
 #define SHP_COIN_X    32
 #define SHP_COIN_Y    10
+#define SHP_TEXT_X    76             /* each row's name and price (the header's words sit at 112) */
 #define SHP_ROW_Y0    98
 #define SHP_ROW_DY    56
 #define SHP_ROW_ICON  32
@@ -2732,17 +2750,19 @@ void render_notice(const tank_t *t, uint16_t *fb, int stride, int kind, int fish
 #define SHP_BTN_H     32
 #define SHP_EARN_X    32
 #define SHP_EARN_W    150
-#define SHP_MODAL_X   48             /* wider than the milestones modal (56 / 336): an item's second line runs to 28 chars = 334 px */
-#define SHP_MODAL_W   352
-#define SHP_MODAL_Y   48
-#define SHP_MODAL_H   244
-#define SHP_EARN_MODAL_Y 40
+#endif
+#define SHP_BTN_DY    ((SHP_ROW_ICON - SHP_BTN_H) / 2)   /* the row's button, centred on its icon */
+#define SHP_MODAL_X   UI(48)         /* wider than the milestones modal (56 / 336): an item's second line runs to 28 chars = 334 px */
+#define SHP_MODAL_W   UI(352)
+#define SHP_MODAL_Y   UI(48)
+#define SHP_MODAL_H   UI(244)
+#define SHP_EARN_MODAL_Y UI(40)
 /* the caption under the rows sits SHP_BTN_H + 12 under the last row (the third row, the castle, 2026-09-16: it used to be fixed at 224 / 244 and the castle's row ran into it) */
-#define SHP_EARN_MODAL_H 224
+#define SHP_EARN_MODAL_H UI(224)
 static int  g_shp_modal = -1;        /* the item whose modal is up, or -1 */
 static bool g_shp_earn;              /* the HOW TO EARN modal is up */
 static bool g_shp_sell_armed;        /* SELL tapped once: the next tap on it sells */
-#define SHP_TWO_GAP 16               /* MOVE and SELL side by side in the modal */
+#define SHP_TWO_GAP UI(16)           /* MOVE and SELL side by side in the modal */
 #define SHP_TWO_X0  (SHP_MODAL_X + (SHP_MODAL_W - 2 * MSP_HOW_W - SHP_TWO_GAP) / 2)
 #define SHP_TWO_X1  (SHP_TWO_X0 + MSP_HOW_W + SHP_TWO_GAP)
 static const icon_t *shop_icon(int item) { return item == 0 ? &icon_shop_plant : item == 1 ? &icon_shop_snail : item == 2 ? &icon_shop_castle : item == 3 ? &icon_shop_coral : &icon_shop_cluster; }
@@ -2752,15 +2772,15 @@ static const icon_t *shop_icon(int item) { return item == 0 ? &icon_shop_plant :
  * right flip through the pages; with one page nothing shows. */
 #define SHP_PER_PAGE 4
 #define SHP_PAGES    ((SD_ITEM_COUNT + SHP_PER_PAGE - 1) / SHP_PER_PAGE)
-#define SHP_ARROW_W  36
-#define SHP_ARROW_H  32
-#define SHP_ARROW_Y  (SHP_COIN_Y + 16)
-#define SHP_ARROW_X1 (TANK_W - 28 - SHP_ARROW_W)          /* next */
-#define SHP_ARROW_X0 (SHP_ARROW_X1 - SHP_ARROW_W - 8)     /* previous */
+#define SHP_ARROW_W  (UI(36) < 30 ? 30 : UI(36))
+#define SHP_ARROW_H  (UI(32) < 24 ? 24 : UI(32))
+#define SHP_ARROW_Y  (SHP_COIN_Y + UI(16))
+#define SHP_ARROW_X1 (TANK_W - UI(28) - (SHP_ARROW_W))        /* next */
+#define SHP_ARROW_X0 (SHP_ARROW_X1 - (SHP_ARROW_W) - UI(8))   /* previous */
 static int g_shp_page;
 static void shop_arrow(ctx_t *c, int x, int y, bool right, uint32_t rgb) {   /* a chevron in a button */
-    button(c, x, y, SHP_ARROW_W, SHP_ARROW_H, 0x1c2f36, rgb, "", 2);
-    int cx = x + SHP_ARROW_W / 2, cy = y + SHP_ARROW_H / 2;
+    button(c, x, y, (SHP_ARROW_W), SHP_ARROW_H, 0x1c2f36, rgb, "", UI_TEXT(2));
+    int cx = x + (SHP_ARROW_W) / 2, cy = y + SHP_ARROW_H / 2;
     for (int i = 0; i < 7; i++) {                            /* a chevron: two strokes meeting at the tip */
         int x = right ? cx - 3 + i : cx + 3 - i;
         rect_fill(c, x, cy - 6 + i, 2, 1, rgb);
@@ -2770,16 +2790,17 @@ static void shop_arrow(ctx_t *c, int x, int y, bool right, uint32_t rgb) {   /* 
 static void price_tag(ctx_t *c, int x, int y, int price, uint32_t rgb) {   /* the small coin + the number */
     blit_icon(c, x, y - 1, &icon_shop_sand_dollar_16, 255);
     char n[16]; snprintf(n, sizeof n, "%d", price);
-    draw_text(c, x + 20, y, 2, rgb, n);
+    draw_text(c, x + 16 + UI(4), y, UI_TEXT(2), rgb, n);
 }
 void render_shop(const tank_t *t, uint16_t *fb, int stride) {
     ctx_t c = ctx_full(fb, stride, 1.0f);
     rect_fill(&c, 0, 0, TANK_W, TANK_H, MSP_INK);
-    blit_icon(&c, SHP_COIN_X, SHP_COIN_Y, &icon_shop_sand_dollar_64, 255);
-    draw_text(&c, 112, SHP_COIN_Y + 6, 2, MSP_TEAL, "SAND DOLLARS");
+    const int hx = SHP_COIN_X + SHP_COIN_ART->w + UI(16);          /* the header's words, right of the coin */
+    blit_icon(&c, SHP_COIN_X, SHP_COIN_Y, SHP_COIN_ART, 255);
+    draw_text(&c, hx, SHP_COIN_Y + UI(6), UI_TEXT(2), MSP_TEAL, "SAND DOLLARS");
     char bal[16]; snprintf(bal, sizeof bal, "%d", (int)t->sd_balance);
-    draw_text(&c, 112, SHP_COIN_Y + 28, 4, 0xffffff, bal);
-    for (int x = 24; x < TANK_W - 24; x++) px_blend(&c, x, SHP_ROW_Y0 - 10, MSP_DIM, 200);
+    draw_text(&c, hx, SHP_COIN_Y + UI(28), UI_TEXT(4), 0xffffff, bal);
+    for (int x = UI(24); x < TANK_W - UI(24); x++) px_blend(&c, x, SHP_ROW_Y0 - UI(10), MSP_DIM, 200);
     if (SHP_PAGES > 1) {
         shop_arrow(&c, SHP_ARROW_X0, SHP_ARROW_Y, false, g_shp_page > 0 ? MSP_TEAL : MSP_DIM);
         shop_arrow(&c, SHP_ARROW_X1, SHP_ARROW_Y, true, g_shp_page < SHP_PAGES - 1 ? MSP_TEAL : MSP_DIM);
@@ -2789,16 +2810,17 @@ void render_shop(const tank_t *t, uint16_t *fb, int stride) {
         int top = SHP_ROW_Y0 + (i - g_shp_page * SHP_PER_PAGE) * SHP_ROW_DY;
         bool owned = (t->sd_unlocks & it->bit) != 0, can = t->sd_balance >= it->price;
         if (owned) blit_icon(&c, SHP_COIN_X, top, shop_icon(i), 255); else blit_icon_locked(&c, SHP_COIN_X, top, shop_icon(i));
-        draw_text(&c, 76, top + 2, 2, 0xffffff, it->name);
-        if (owned) draw_text(&c, 76, top + 20, 2, MSP_TEAL, "IN THE TANK");
-        else price_tag(&c, 76, top + 20, it->price, can ? MSP_TEAL : MSP_DIM);
-        if (owned)     button(&c, SHP_BTN_X, top, SHP_BTN_W, SHP_BTN_H, MSP_INK, MSP_DIM, "IN TANK", 2);
-        else if (can) { button(&c, SHP_BTN_X, top, SHP_BTN_W, SHP_BTN_H, MSP_TEAL, MSP_TEAL, "UNLOCK", 2);
-                        draw_text(&c, SHP_BTN_X + (SHP_BTN_W - text_w("UNLOCK", 2)) / 2, top + (SHP_BTN_H - 14) / 2, 2, MSP_INK, "UNLOCK"); }
-        else           button(&c, SHP_BTN_X, top, SHP_BTN_W, SHP_BTN_H, 0x1c2f36, MSP_DIM, "UNLOCK", 2);
+        const int by = top + SHP_BTN_DY;
+        draw_text(&c, SHP_TEXT_X, top + UI(2), UI_TEXT(2), 0xffffff, it->name);
+        if (owned) draw_text(&c, SHP_TEXT_X, top + UI(20), UI_TEXT(2), MSP_TEAL, "IN THE TANK");
+        else price_tag(&c, SHP_TEXT_X, top + UI(20), it->price, can ? MSP_TEAL : MSP_DIM);
+        if (owned)     button(&c, SHP_BTN_X, by, SHP_BTN_W, SHP_BTN_H, MSP_INK, MSP_DIM, "IN TANK", UI_TEXT(2));
+        else if (can) { button(&c, SHP_BTN_X, by, SHP_BTN_W, SHP_BTN_H, MSP_TEAL, MSP_TEAL, "UNLOCK", UI_TEXT(2));
+                        draw_text(&c, SHP_BTN_X + (SHP_BTN_W - text_w("UNLOCK", UI_TEXT(2))) / 2, by + (SHP_BTN_H - 7 * UI_TEXT(2)) / 2, UI_TEXT(2), MSP_INK, "UNLOCK"); }
+        else           button(&c, SHP_BTN_X, by, SHP_BTN_W, SHP_BTN_H, 0x1c2f36, MSP_DIM, "UNLOCK", UI_TEXT(2));
     }
-    button(&c, SHP_EARN_X, MSP_CLOSE_Y, SHP_EARN_W, MSP_CLOSE_H, 0x1c2f36, MSP_TEAL, "HOW TO EARN", 2);
-    button(&c, MSP_CLOSE_X, MSP_CLOSE_Y, MSP_CLOSE_W, MSP_CLOSE_H, 0x1c2f36, MSP_TEAL, "CLOSE", 2);
+    button(&c, SHP_EARN_X, MSP_CLOSE_Y, SHP_EARN_W, MSP_CLOSE_H, 0x1c2f36, MSP_TEAL, "HOW TO EARN", UI_TEXT(2));
+    button(&c, MSP_CLOSE_X, MSP_CLOSE_Y, MSP_CLOSE_W, MSP_CLOSE_H, 0x1c2f36, MSP_TEAL, "CLOSE", UI_TEXT(2));
     if (g_shp_modal < 0 && !g_shp_earn) return;
     for (int y = 0; y < TANK_H; y++)                          /* the page out of reach under a modal */
         for (int x = 0; x < TANK_W; x++) fb[y * stride + x] = (uint16_t)((fb[y * stride + x] >> 1) & 0x7bef);
@@ -2807,10 +2829,10 @@ void render_shop(const tank_t *t, uint16_t *fb, int stride) {
         const int Y = SHP_EARN_MODAL_Y, H = SHP_EARN_MODAL_H;
         rect_fill(&c, X, Y, W, H, 0x04141a);
         rect_edge(&c, X, Y, W, H, MSP_TEAL); rect_edge(&c, X + 1, Y + 1, W - 2, H - 2, 0x1c2f36);
-        draw_text(&c, X + (W - text_w("HOW TO EARN", 3)) / 2, Y + 14, 3, 0xffffff, "HOW TO EARN");
+        draw_text(&c, X + (W - text_w("HOW TO EARN", UI_TEXT(3))) / 2, Y + UI(14), UI_TEXT(3), 0xffffff, "HOW TO EARN");
         const char *const *lines = progression_sd_earn_lines();
-        for (int i = 0; lines[i]; i++) draw_text(&c, X + 14, Y + 50 + i * 24, 2, MSP_TEAL, lines[i]);
-        draw_text(&c, X + (W - text_w("TAP TO CLOSE", 2)) / 2, Y + H - 24, 2, 0x3f6a72, "TAP TO CLOSE");
+        for (int i = 0; lines[i]; i++) draw_text(&c, X + UI(14), Y + UI(50) + i * UI(24), UI_TEXT(2), MSP_TEAL, lines[i]);
+        draw_text(&c, X + (W - text_w("TAP TO CLOSE", UI_TEXT(2))) / 2, Y + H - UI(24), UI_TEXT(2), 0x3f6a72, "TAP TO CLOSE");
         return;
     }
     const sd_item_t *it = &SD_ITEMS[g_shp_modal];
@@ -2818,30 +2840,31 @@ void render_shop(const tank_t *t, uint16_t *fb, int stride) {
     bool owned = (t->sd_unlocks & it->bit) != 0, can = t->sd_balance >= it->price;
     rect_fill(&c, X, Y, W, H, 0x04141a);
     rect_edge(&c, X, Y, W, H, MSP_TEAL); rect_edge(&c, X + 1, Y + 1, W - 2, H - 2, 0x1c2f36);
-    blit_icon_scaled(&c, X + (W - 64) / 2, Y + 14, shop_icon(g_shp_modal), 2, true);
-    draw_text(&c, X + (W - text_w(it->name, 3)) / 2, Y + 88, 3, 0xffffff, it->name);
-    draw_text(&c, X + (W - text_w(it->words, 2)) / 2, Y + 118, 2, MSP_TEAL, it->words);
-    draw_text(&c, X + (W - text_w(it->words2, 2)) / 2, Y + 138, 2, MSP_TEAL, it->words2);
-    const int bx = X + (W - MSP_HOW_W) / 2, by = Y + H - 12 - MSP_HOW_H;
+    const icon_t *art = shop_icon(g_shp_modal);
+    blit_icon_scaled(&c, X + (W - art->w * UI_TEXT(2)) / 2, Y + UI(14), art, UI_TEXT(2), true);
+    draw_text(&c, X + (W - text_w(it->name, UI_TEXT(3))) / 2, Y + UI(88), UI_TEXT(3), 0xffffff, it->name);
+    draw_text(&c, X + (W - text_w(it->words, UI_TEXT(2))) / 2, Y + UI(118), UI_TEXT(2), MSP_TEAL, it->words);
+    draw_text(&c, X + (W - text_w(it->words2, UI_TEXT(2))) / 2, Y + UI(138), UI_TEXT(2), MSP_TEAL, it->words2);
+    const int bx = X + (W - MSP_HOW_W) / 2, by = Y + H - UI(12) - MSP_HOW_H;
     if (owned && tank_decor_placeable(g_shp_modal)) {         /* a placeable piece: MOVE re-opens the placement page, SELL (twice) sells it back */
         char sell[24]; snprintf(sell, sizeof sell, "SELLS BACK FOR %d", progression_sell_value(g_shp_modal));
-        draw_text(&c, X + (W - text_w("IN THE TANK", 2)) / 2, Y + 164, 2, MSP_TEAL, "IN THE TANK");
-        draw_text(&c, X + (W - text_w(sell, 2)) / 2, Y + 184, 2, MSP_DIM, sell);
-        button(&c, SHP_TWO_X0, by, MSP_HOW_W, MSP_HOW_H, 0x1c2f36, MSP_TEAL, "MOVE", 2);
+        draw_text(&c, X + (W - text_w("IN THE TANK", UI_TEXT(2))) / 2, Y + UI(164), UI_TEXT(2), MSP_TEAL, "IN THE TANK");
+        draw_text(&c, X + (W - text_w(sell, UI_TEXT(2))) / 2, Y + UI(184), UI_TEXT(2), MSP_DIM, sell);
+        button(&c, SHP_TWO_X0, by, MSP_HOW_W, MSP_HOW_H, 0x1c2f36, MSP_TEAL, "MOVE", UI_TEXT(2));
         if (g_shp_sell_armed) { snprintf(sell, sizeof sell, "+%d OK?", progression_sell_value(g_shp_modal));
-                                button(&c, SHP_TWO_X1, by, MSP_HOW_W, MSP_HOW_H, MSP_TEAL, MSP_TEAL, sell, 2);
-                                draw_text(&c, SHP_TWO_X1 + (MSP_HOW_W - text_w(sell, 2)) / 2, by + (MSP_HOW_H - 14) / 2, 2, MSP_INK, sell); }
-        else button(&c, SHP_TWO_X1, by, MSP_HOW_W, MSP_HOW_H, 0x1c2f36, MSP_DIM, "SELL", 2);
-    } else if (owned) draw_text(&c, X + (W - text_w("IN THE TANK", 2)) / 2, by + 8, 2, MSP_TEAL, "IN THE TANK");   /* the snail: a permanent resident */
+                                button(&c, SHP_TWO_X1, by, MSP_HOW_W, MSP_HOW_H, MSP_TEAL, MSP_TEAL, sell, UI_TEXT(2));
+                                draw_text(&c, SHP_TWO_X1 + (MSP_HOW_W - text_w(sell, UI_TEXT(2))) / 2, by + (MSP_HOW_H - 7 * UI_TEXT(2)) / 2, UI_TEXT(2), MSP_INK, sell); }
+        else button(&c, SHP_TWO_X1, by, MSP_HOW_W, MSP_HOW_H, 0x1c2f36, MSP_DIM, "SELL", UI_TEXT(2));
+    } else if (owned) draw_text(&c, X + (W - text_w("IN THE TANK", UI_TEXT(2))) / 2, by + UI(8), UI_TEXT(2), MSP_TEAL, "IN THE TANK");   /* the snail: a permanent resident */
     else {
         char line[32]; snprintf(line, sizeof line, "%d", it->price);
-        int pw = 20 + text_w(line, 2);
-        price_tag(&c, X + (W - pw) / 2, Y + 164, it->price, can ? 0xffffff : MSP_DIM);
+        int pw = 16 + UI(4) + text_w(line, UI_TEXT(2));
+        price_tag(&c, X + (W - pw) / 2, Y + UI(164), it->price, can ? 0xffffff : MSP_DIM);
         if (!can) { snprintf(line, sizeof line, "YOU HAVE %d", (int)t->sd_balance);
-                    draw_text(&c, X + (W - text_w(line, 2)) / 2, Y + 184, 2, MSP_DIM, line); }
-        if (can) { button(&c, bx, by, MSP_HOW_W, MSP_HOW_H, MSP_TEAL, MSP_TEAL, "UNLOCK", 2);
-                   draw_text(&c, bx + (MSP_HOW_W - text_w("UNLOCK", 2)) / 2, by + (MSP_HOW_H - 14) / 2, 2, MSP_INK, "UNLOCK"); }
-        else button(&c, bx, by, MSP_HOW_W, MSP_HOW_H, 0x1c2f36, MSP_DIM, "UNLOCK", 2);
+                    draw_text(&c, X + (W - text_w(line, UI_TEXT(2))) / 2, Y + UI(184), UI_TEXT(2), MSP_DIM, line); }
+        if (can) { button(&c, bx, by, MSP_HOW_W, MSP_HOW_H, MSP_TEAL, MSP_TEAL, "UNLOCK", UI_TEXT(2));
+                   draw_text(&c, bx + (MSP_HOW_W - text_w("UNLOCK", UI_TEXT(2))) / 2, by + (MSP_HOW_H - 7 * UI_TEXT(2)) / 2, UI_TEXT(2), MSP_INK, "UNLOCK"); }
+        else button(&c, bx, by, MSP_HOW_W, MSP_HOW_H, 0x1c2f36, MSP_DIM, "UNLOCK", UI_TEXT(2));
     }
 }
 int render_shop_tap(const tank_t *t, float x, float y) {
@@ -2849,7 +2872,7 @@ int render_shop_tap(const tank_t *t, float x, float y) {
     if (g_shp_modal >= 0) {
         int item = g_shp_modal; const sd_item_t *it = &SD_ITEMS[item];
         bool owned = (t->sd_unlocks & it->bit) != 0, can = t->sd_balance >= it->price;
-        const int bx = SHP_MODAL_X + (SHP_MODAL_W - MSP_HOW_W) / 2, by = SHP_MODAL_Y + SHP_MODAL_H - 12 - MSP_HOW_H;
+        const int bx = SHP_MODAL_X + (SHP_MODAL_W - MSP_HOW_W) / 2, by = SHP_MODAL_Y + SHP_MODAL_H - UI(12) - MSP_HOW_H;
         bool row = y >= by - MSP_HOW_SLOP_UP && y < by + MSP_HOW_H + MSP_HOW_SLOP_DN;
         bool on_btn = row && x >= bx - MSP_HOW_SLOP_X && x < bx + MSP_HOW_W + MSP_HOW_SLOP_X;
         if (owned && tank_decor_placeable(item)) {                /* two buttons: MOVE, and SELL armed then confirmed */
@@ -2865,16 +2888,16 @@ int render_shop_tap(const tank_t *t, float x, float y) {
         if (on_btn && !owned && can) return SHOP_TAP_BUY + item;
         return SHOP_TAP_KEPT;
     }
-    if (x >= MSP_CLOSE_X - 8 && y >= MSP_CLOSE_Y - 4) return SHOP_TAP_CLOSE;
-    if (x < SHP_EARN_X + SHP_EARN_W + 8 && y >= MSP_CLOSE_Y - 4) { g_shp_earn = true; return SHOP_TAP_KEPT; }
-    if (SHP_PAGES > 1 && y < SHP_ROW_Y0 - 10 && x >= SHP_ARROW_X0 - 8) {   /* the page arrows, in the header band */
-        if (x < SHP_ARROW_X1 - 4) { if (g_shp_page > 0) g_shp_page--; }
+    if (x >= MSP_CLOSE_X - UI(8) && y >= MSP_CLOSE_Y - UI(4)) return SHOP_TAP_CLOSE;
+    if (x < SHP_EARN_X + SHP_EARN_W + UI(8) && y >= MSP_CLOSE_Y - UI(4)) { g_shp_earn = true; return SHOP_TAP_KEPT; }
+    if (SHP_PAGES > 1 && y < SHP_ROW_Y0 - UI(10) && x >= SHP_ARROW_X0 - UI(8)) {   /* the page arrows, in the header band */
+        if (x < SHP_ARROW_X1 - UI(4)) { if (g_shp_page > 0) g_shp_page--; }
         else if (g_shp_page < SHP_PAGES - 1) g_shp_page++;
         return SHOP_TAP_KEPT;
     }
     for (int i = g_shp_page * SHP_PER_PAGE; i < SD_ITEM_COUNT && i < (g_shp_page + 1) * SHP_PER_PAGE; i++) {
         int top = SHP_ROW_Y0 + (i - g_shp_page * SHP_PER_PAGE) * SHP_ROW_DY;
-        if (x >= 20 && y >= top - 8 && y < top + SHP_ROW_DY - 8) { g_shp_modal = i; return SHOP_TAP_KEPT; }
+        if (x >= UI(20) && y >= top - UI(8) && y < top + SHP_ROW_DY - UI(8)) { g_shp_modal = i; return SHOP_TAP_KEPT; }
     }
     return SHOP_TAP_NONE;
 }
@@ -2893,12 +2916,14 @@ void render_sd_toast(const tank_t *t, uint16_t *fb, int stride) {
     if (t->clock >= g_toast_until || t->clock < g_toast_until - TOAST_S - 1) return;   /* (a reset sends the clock back) */
     ctx_t c = ctx_full(fb, stride, 1.0f);
     char txt[16]; snprintf(txt, sizeof txt, "+%d", g_toast_n);
-    const int W = 30 + text_w(txt, 2), H = 22, X = (TANK_W - W) / 2, Y = 8;
+    /* the 16 px coin and the number: a margin, the coin, a gap, the number, a margin */
+    const int tx = UI(5) + 16 + UI(4);
+    const int W = tx + text_w(txt, UI_TEXT(2)) + UI(5), H = 16 + 2 * UI(3), X = (TANK_W - W) / 2, Y = UI(8);
     for (int y = Y; y < Y + H; y++)
         for (int x = X; x < X + W; x++) px_blend(&c, x, y, 0x04141a, 215);
     rect_edge(&c, X, Y, W, H, MSP_TEAL);
-    blit_icon(&c, X + 5, Y + 3, &icon_shop_sand_dollar_16, 255);
-    draw_text(&c, X + 25, Y + 4, 2, 0xffffff, txt);
+    blit_icon(&c, X + UI(5), Y + UI(3), &icon_shop_sand_dollar_16, 255);
+    draw_text(&c, X + tx, Y + (H - 7 * UI_TEXT(2)) / 2, UI_TEXT(2), 0xffffff, txt);
 }
 
 /* ---- settings page (2026-09-15) ----
@@ -2910,6 +2935,23 @@ void render_sd_toast(const tank_t *t, uint16_t *fb, int stride) {
  * (MANUAL, the default = the double-tap on the glass; AUTO = the idle rule,
  * the keeper's opt-in) with the idle time under it as one number: swipe it
  * up or down, or tap the chevrons; the default is LIGHT_IDLE_S. */
+/* A SCREEN row (UPRIGHT / FLIPPED) on a board with no IMU to turn the
+ * picture by itself - the CYD, the only compact board (render_settings_set_flip). */
+#define SET_HAS_FLIP  UI_COMPACT
+#if UI_COMPACT
+#define SET_TITLE_Y   6
+#define SET_ROW1_Y    34             /* BRIGHTNESS */
+#define SET_ROW2_Y    62             /* VOLUME */
+#define SET_NOTE_Y    83             /* "FISH ARE QUIET AT NIGHT" */
+#define SET_ROW4_Y    104            /* SCREEN */
+#define SET_ROW3_Y    132            /* LIGHTS OUT */
+#define SET_LABEL_X   8
+#define SET_SEG_X     118            /* first segment */
+#define SET_SEG_W     62
+#define SET_SEG_DX    66
+#define SET_SEG_H     24
+#define SET_SEG_Y(row) ((row) - 8)   /* the segment sits on the label's line */
+#else
 #define SET_TITLE_Y   14
 #define SET_ROW1_Y    58             /* BRIGHTNESS */
 #define SET_ROW2_Y    108            /* VOLUME */
@@ -2921,66 +2963,81 @@ void render_sd_toast(const tank_t *t, uint16_t *fb, int stride) {
 #define SET_SEG_DX    82
 #define SET_SEG_H     40
 #define SET_SEG_Y(row) ((row) - 10)  /* the segment sits on the label's line */
+#endif
 /* the seconds selector: ONE number in the 4x font (28 px tall), chevrons
  * above and below; a swipe up or down anywhere on it steps the whole value
  * (2026-09-15 evening, Strato: "18, 17 ... 10, then 9 - not 19"; the first
  * cut was three letter-wheel digits). Clamped live to LIGHT_IDLE_MIN_S ..
  * LIGHT_IDLE_MAX_S. Sits well clear of the LIGHTS OUT segments: a finger
  * aiming at the up chevron used to land on MANUAL. */
-#define SET_NUM_SCALE 4
+#define SET_NUM_SCALE UI_TEXT(4)
 #define SET_NUM_H     (7 * SET_NUM_SCALE)
 #define SET_NUM_X     SET_SEG_X       /* the number's left edge (right-aligned in a 3-digit box) */
 #define SET_NUM_BOX_W (3 * 6 * SET_NUM_SCALE - SET_NUM_SCALE)
+#if UI_COMPACT
+#define SET_NUM_Y     176
+#define SET_NUM_GAP   16              /* chevron tip to the number */
+#else
 #define SET_NUM_Y     266
 #define SET_NUM_GAP   30              /* chevron tip to the number */
-#define SET_AFTER_Y   (SET_NUM_Y + (SET_NUM_H - 14) / 2)
-#define SET_STEP_PX   15              /* drag travel per step */
-#define SET_LIGHT_BAND_END (SET_SEG_Y(SET_ROW3_Y) + SET_SEG_H + 8)   /* the segments' band stops just under them */
+#endif
+#define SET_AFTER_Y   (SET_NUM_Y + (SET_NUM_H - 7 * UI_TEXT(2)) / 2)
+#define SET_STEP_PX   UI(15)          /* drag travel per step */
+#define SET_LIGHT_BAND_END (SET_SEG_Y(SET_ROW3_Y) + SET_SEG_H + UI(8))   /* the segments' band stops just under them */
 static const char *const SET_BRIGHT[3] = { "30%", "60%", "100%" };
 static const int         SET_BRIGHT_PCT[3] = { 30, 60, 100 };
 static const char *const SET_VOLUME[3] = { "OFF", "QUIET", "NORMAL" };
 static const char *const SET_LIGHT[2]  = { "MANUAL", "AUTO" };   /* the default first */
+#if SET_HAS_FLIP
+static const char *const SET_SCREEN[2] = { "UPRIGHT", "FLIPPED" };
+#endif
+static bool g_set_flipped;                                       /* the SCREEN row's state, from the platform */
+void render_settings_set_flip(bool flipped) { g_set_flipped = flipped; }
 
 static void set_row(ctx_t *c, int row_y, const char *label, const char *const names[], int n, int chosen) {
-    draw_text(c, SET_LABEL_X, row_y, 2, MSP_TEAL, label);
+    draw_text(c, SET_LABEL_X, row_y, UI_TEXT(2), MSP_TEAL, label);
     for (int i = 0; i < n; i++) {
         int x = SET_SEG_X + i * SET_SEG_DX, y = SET_SEG_Y(row_y);
         if (i == chosen) {                       /* lit: teal, ink lettering */
-            button(c, x, y, SET_SEG_W, SET_SEG_H, MSP_TEAL, MSP_TEAL, names[i], 2);
-            draw_text(c, x + (SET_SEG_W - text_w(names[i], 2)) / 2, y + (SET_SEG_H - 14) / 2, 2, MSP_INK, names[i]);
-        } else button(c, x, y, SET_SEG_W, SET_SEG_H, 0x1c2f36, MSP_DIM, names[i], 2);
+            button(c, x, y, SET_SEG_W, SET_SEG_H, MSP_TEAL, MSP_TEAL, names[i], UI_TEXT(2));
+            draw_text(c, x + (SET_SEG_W - text_w(names[i], UI_TEXT(2))) / 2, y + (SET_SEG_H - 7 * UI_TEXT(2)) / 2, UI_TEXT(2), MSP_INK, names[i]);
+        } else button(c, x, y, SET_SEG_W, SET_SEG_H, 0x1c2f36, MSP_DIM, names[i], UI_TEXT(2));
     }
 }
 static void set_chevron(ctx_t *c, int cx, int y, bool up, uint32_t rgb) {   /* the setup's, a size down */
+    const int b = UI(3);                         /* the block */
     for (int i = 0; i < 4; i++) {
-        int yy = up ? y + i * 3 : y - i * 3;
-        rect_fill(c, cx - 3 - i * 3, yy, 3, 3, rgb);
-        rect_fill(c, cx + i * 3, yy, 3, 3, rgb);
+        int yy = up ? y + i * b : y - i * b;
+        rect_fill(c, cx - b - i * b, yy, b, b, rgb);
+        rect_fill(c, cx + i * b, yy, b, b, rgb);
     }
 }
 void render_settings(const tank_t *t, uint16_t *fb, int stride, int bright_pct, int volume) {
     ctx_t c = ctx_full(fb, stride, 1.0f);
     rect_fill(&c, 0, 0, TANK_W, TANK_H, MSP_INK);
-    draw_text(&c, (TANK_W - text_w("SETTINGS", 3)) / 2, SET_TITLE_Y, 3, 0xffffff, "SETTINGS");
+    draw_text(&c, (TANK_W - text_w("SETTINGS", UI_TEXT(3))) / 2, SET_TITLE_Y, UI_TEXT(3), 0xffffff, "SETTINGS");
     int bi = bright_pct <= 30 ? 0 : bright_pct <= 60 ? 1 : 2;
     set_row(&c, SET_ROW1_Y, "BRIGHTNESS", SET_BRIGHT, 3, bi);
     set_row(&c, SET_ROW2_Y, "VOLUME", SET_VOLUME, 3, volume < 0 ? 0 : volume > 2 ? 2 : volume);
-    draw_text(&c, SET_LABEL_X, SET_NOTE_Y, 2, MSP_DIM, "FISH ARE QUIET AT NIGHT");
+    draw_text(&c, SET_LABEL_X, SET_NOTE_Y, UI_TEXT(2), MSP_DIM, "FISH ARE QUIET AT NIGHT");
+#if SET_HAS_FLIP
+    set_row(&c, SET_ROW4_Y, "SCREEN", SET_SCREEN, 2, g_set_flipped ? 1 : 0);
+#endif
     set_row(&c, SET_ROW3_Y, "LIGHTS OUT", SET_LIGHT, 2, t->light_auto ? 1 : 0);
     if (t->light_auto) {
         /* AUTO: AFTER [ n ] SEC, the number with its chevrons */
         char num[8]; snprintf(num, sizeof num, "%d", t->light_idle_s);
         int nw = text_w(num, SET_NUM_SCALE), nx = SET_NUM_X + SET_NUM_BOX_W - nw, cx = SET_NUM_X + SET_NUM_BOX_W / 2;
-        draw_text(&c, SET_LABEL_X, SET_AFTER_Y, 2, MSP_TEAL, "AFTER");
+        draw_text(&c, SET_LABEL_X, SET_AFTER_Y, UI_TEXT(2), MSP_TEAL, "AFTER");
         draw_text(&c, nx, SET_NUM_Y, SET_NUM_SCALE, 0xffffff, num);
-        rect_fill(&c, SET_NUM_X, SET_NUM_Y + SET_NUM_H + 6, SET_NUM_BOX_W, 3, 0x3f6a72);
+        rect_fill(&c, SET_NUM_X, SET_NUM_Y + SET_NUM_H + UI(6), SET_NUM_BOX_W, 3, 0x3f6a72);
         set_chevron(&c, cx, SET_NUM_Y - SET_NUM_GAP, true, MSP_TEAL);
         set_chevron(&c, cx, SET_NUM_Y + SET_NUM_H + SET_NUM_GAP + 3, false, MSP_TEAL);
-        draw_text(&c, SET_NUM_X + SET_NUM_BOX_W + 10, SET_AFTER_Y, 2, MSP_TEAL, "SEC");
+        draw_text(&c, SET_NUM_X + SET_NUM_BOX_W + UI(10), SET_AFTER_Y, UI_TEXT(2), MSP_TEAL, "SEC");
     } else {
         /* MANUAL: how to work the light instead */
-        draw_text(&c, SET_LABEL_X, SET_NUM_Y - 8, 2, MSP_TEAL, "DOUBLE-TAP THE GLASS TO");
-        draw_text(&c, SET_LABEL_X, SET_NUM_Y + 14, 2, MSP_TEAL, "TURN THE LIGHT ON OR OFF");
+        draw_text(&c, SET_LABEL_X, SET_NUM_Y - UI(8), UI_TEXT(2), MSP_TEAL, "DOUBLE-TAP THE GLASS TO");
+        draw_text(&c, SET_LABEL_X, SET_NUM_Y + UI(14), UI_TEXT(2), MSP_TEAL, "TURN THE LIGHT ON OR OFF");
     }
     /* the firmware version, hugging the bottom left of the frame (6 px up,
        on the labels' x; the bezel's curve is clear there), small (8 px) and
@@ -2990,12 +3047,16 @@ void render_settings(const tank_t *t, uint16_t *fb, int stride, int bright_pct, 
        it", "make it 8px tall", "hug the bottom of the frame" (2026-09-16).
        The installer page shows the version it would write in the same words. */
     char ver[40]; snprintf(ver, sizeof ver, "FW %s", version_port_string());
+    /* clipped short of CLOSE: on the CYD the button shares its line (6 px a
+       character in the 8 px font); a release version never gets that long */
+    int room = (MSP_CLOSE_X - UI(8) - SET_LABEL_X) / 6;
+    if (room >= 0 && room < (int)sizeof ver) ver[room] = 0;
     draw_text_8px(&c, SET_LABEL_X, TANK_H - 8 - 6, MSP_DIM, ver);
-    button(&c, MSP_CLOSE_X, MSP_CLOSE_Y, MSP_CLOSE_W, MSP_CLOSE_H, 0x1c2f36, MSP_TEAL, "CLOSE", 2);
+    button(&c, MSP_CLOSE_X, MSP_CLOSE_Y, MSP_CLOSE_W, MSP_CLOSE_H, 0x1c2f36, MSP_TEAL, "CLOSE", UI_TEXT(2));
 }
 static int set_segment(float x, int n) {
-    if (x < SET_SEG_X - 10) return -1;
-    int i = (int)((x - SET_SEG_X + 3) / SET_SEG_DX);
+    if (x < SET_SEG_X - UI(10)) return -1;
+    int i = (int)((x - SET_SEG_X + UI(3)) / SET_SEG_DX);
     return i < 0 ? 0 : i >= n ? n - 1 : i;
 }
 /* the hit test: what a TAP at (x,y) means. *value: BRIGHT the percent,
@@ -3003,18 +3064,26 @@ static int set_segment(float x, int n) {
  * value (IDLE_UP / IDLE_DOWN the chevrons, IDLE_NUM the number itself). */
 enum { SET_HIT_IDLE_NUM = 100, SET_HIT_IDLE_UP, SET_HIT_IDLE_DOWN };
 int render_settings_tap(float x, float y, int *value) {
-    if (x >= MSP_CLOSE_X - 8 && y >= MSP_CLOSE_Y - 4) return SET_TAP_CLOSE;
+    if (x >= MSP_CLOSE_X - UI(8) && y >= MSP_CLOSE_Y - UI(4)) return SET_TAP_CLOSE;
     /* the row bands: from a little above each segment down to the next row
        (fingers report low); the LIGHTS OUT band ends just under its
        segments so the number's up chevron below is its own */
     int seg = set_segment(x, 3);
-    if (y >= SET_SEG_Y(SET_ROW1_Y) - 12 && y < SET_SEG_Y(SET_ROW2_Y) - 12) { if (seg < 0) return SET_TAP_NONE; *value = SET_BRIGHT_PCT[seg]; return SET_TAP_BRIGHT; }
-    if (y >= SET_SEG_Y(SET_ROW2_Y) - 12 && y < SET_SEG_Y(SET_ROW3_Y) - 12) { if (seg < 0) return SET_TAP_NONE; *value = seg; return SET_TAP_VOLUME; }
-    if (y >= SET_SEG_Y(SET_ROW3_Y) - 12 && y < SET_LIGHT_BAND_END)          { seg = set_segment(x, 2); if (seg < 0) return SET_TAP_NONE; *value = seg == 1; return SET_TAP_LIGHT; }
-    if (y >= SET_LIGHT_BAND_END && x >= SET_NUM_X - 30 && x < SET_NUM_X + SET_NUM_BOX_W + 30) {
+#if SET_HAS_FLIP
+    const int after_volume = SET_ROW4_Y;         /* the SCREEN row sits between VOLUME and LIGHTS OUT */
+#else
+    const int after_volume = SET_ROW3_Y;
+#endif
+    if (y >= SET_SEG_Y(SET_ROW1_Y) - UI(12) && y < SET_SEG_Y(SET_ROW2_Y) - UI(12)) { if (seg < 0) return SET_TAP_NONE; *value = SET_BRIGHT_PCT[seg]; return SET_TAP_BRIGHT; }
+    if (y >= SET_SEG_Y(SET_ROW2_Y) - UI(12) && y < SET_SEG_Y(after_volume) - UI(12)) { if (seg < 0) return SET_TAP_NONE; *value = seg; return SET_TAP_VOLUME; }
+#if SET_HAS_FLIP
+    if (y >= SET_SEG_Y(SET_ROW4_Y) - UI(12) && y < SET_SEG_Y(SET_ROW3_Y) - UI(12)) { seg = set_segment(x, 2); if (seg < 0) return SET_TAP_NONE; *value = seg == 1; return SET_TAP_FLIP; }
+#endif
+    if (y >= SET_SEG_Y(SET_ROW3_Y) - UI(12) && y < SET_LIGHT_BAND_END)          { seg = set_segment(x, 2); if (seg < 0) return SET_TAP_NONE; *value = seg == 1; return SET_TAP_LIGHT; }
+    if (y >= SET_LIGHT_BAND_END && x >= SET_NUM_X - UI(30) && x < SET_NUM_X + SET_NUM_BOX_W + UI(30)) {
         *value = 0;
-        if (y < SET_NUM_Y - 8) return SET_HIT_IDLE_UP;                     /* the band above the number */
-        if (y < SET_NUM_Y + SET_NUM_H + 14) return SET_HIT_IDLE_NUM;      /* the number */
+        if (y < SET_NUM_Y - UI(8)) return SET_HIT_IDLE_UP;                     /* the band above the number */
+        if (y < SET_NUM_Y + SET_NUM_H + UI(14)) return SET_HIT_IDLE_NUM;      /* the number */
         return SET_HIT_IDLE_DOWN;                                          /* below, down to the bezel */
     }
     return SET_TAP_NONE;
@@ -3049,7 +3118,7 @@ int render_settings_touch(tank_t *t, float x, float y, bool down, int *value) {
                 } else if ((h == SET_HIT_IDLE_UP || h == SET_HIT_IDLE_DOWN) && t->light_auto) {
                     set_step(t, h == SET_HIT_IDLE_UP ? +1 : -1); progression_settings_changed();
                     r = SET_TAP_IDLE; *value = t->light_idle_s;
-                } else if (h == SET_TAP_CLOSE || h == SET_TAP_BRIGHT || h == SET_TAP_VOLUME) { r = h; *value = v; }
+                } else if (h == SET_TAP_CLOSE || h == SET_TAP_BRIGHT || h == SET_TAP_VOLUME || h == SET_TAP_FLIP) { r = h; *value = v; }
             }
         }
     }
