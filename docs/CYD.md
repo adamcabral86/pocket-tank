@@ -91,6 +91,12 @@ mirrors), so a frame goes out row by row, only byte-swapped, from two
 ping-pong DMA stripes of 20 rows; 40 MHz SPI. The backlight is LEDC PWM on
 GPIO45; the flip is the same register with both mirrors toggled.
 
+**Audio:** the same ES8311 on the CYD's own I2S pins. The pins and the level
+that turns the amplifier on are the board's (`board_pins.h`): the CYD's is
+enabled low on GPIO1, so the port sets it off before the pin becomes an
+output and holds it high through deep sleep. No PMIC switches the codec's
+analog supply here; the port's call to do so finds none and does nothing.
+
 **Touch:** the FT5x06 driver with the reset on GPIO18. On the bench the panel
 reads turned 180 degrees from the picture, and the AMOLED's 10 px
 finger-landing correction made every miss land above its button, so it is
@@ -100,6 +106,9 @@ finger-landing correction made every miss land above its button, so it is
 
 - 17.5 fps: 14 ms to render, 30 ms to send a frame at 40 MHz SPI.
 - The model: 12.7 tokens a second, 3.5 s a decision - as on the AMOLED board.
+- Sound, on a speaker on the board's socket: the codec and amplifier up
+  255 ms after the first touch, down 5 s after the last sound; 17 of the 24
+  cues are in the bank.
 - On the I2C bus: 0x18 (the ES8311) and 0x38 (the FT6336). The AMOLED's
   other parts are absent and say so at boot: no AXP2101, no QMI8658, and the
   PCF85063 probe NACKs, so after a power loss the clock starts from the
@@ -107,10 +116,6 @@ finger-landing correction made every miss land above its button, so it is
 
 ## Still open
 
-- **Audio.** The codec is the same ES8311, but the AMOLED's I2S and amp pins
-  are this board's I2C data, backlight and LCD data/command lines. They move
-  into `board_pins.h` (MCLK 4, BCLK 5, LRCK 7, DOUT 8, the amp low on GPIO1)
-  before `CONFIG_POCKET_TANK_AUDIO_ES8311` goes on.
 - **Battery.** The cell's voltage reaches GPIO9 through the board's divider,
   whose ratio is still to be measured. Without a meter the battery pill and
   its page stay hidden (the page is still laid out for 448 x 368).

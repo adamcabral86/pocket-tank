@@ -24,6 +24,13 @@
 #define I2C_ADDR_FT6336   0x38
 #define PANEL_W           240      /* native portrait; the panel scans landscape (MADCTL) */
 #define PANEL_H           320
+/* audio: the ES8311 (I2C 0x18) on I2S, and the power amplifier's enable */
+#define PIN_I2S_MCLK      4
+#define PIN_I2S_BCLK      5
+#define PIN_I2S_WS        7
+#define PIN_I2S_DOUT      8        /* ESP -> codec DSDIN; GPIO6 is the microphone's way back, unused */
+#define PIN_AMP_EN        1
+#define AMP_EN_ON         0        /* the spec: "low level enable" */
 #else
 #define PIN_LCD_CS        12
 #define PIN_LCD_PCLK      11
@@ -40,5 +47,12 @@
 #define PANEL_W           368      /* native portrait */
 #define PANEL_H           448
 #define V2_PANEL_X_GAP    0x10
+/* audio (resources/ESP32-S3-Touch-AMOLED-1.8.pdf): the ES8311 on I2S, the NS4150B's CTRL */
+#define PIN_I2S_MCLK      16
+#define PIN_I2S_BCLK      9
+#define PIN_I2S_WS        45
+#define PIN_I2S_DOUT      8        /* ESP -> codec DSDIN */
+#define PIN_AMP_EN        46       /* NS4150B CTRL, 10k pulldown on the board */
+#define AMP_EN_ON         1
 #endif  /* board */
 #endif

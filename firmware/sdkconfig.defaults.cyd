@@ -4,6 +4,5 @@ CONFIG_POCKET_TANK_BOARD_CYD28=y
 CONFIG_POCKET_TANK_DISPLAY_SH8601=n
 CONFIG_POCKET_TANK_DISPLAY_ILI9341=y
 CONFIG_POCKET_TANK_TOUCH_FT3168=y
-# Off until its pins move into board_pins.h: the AMOLED's I2S and amp pins
-# are the CYD's I2C data, backlight and display data/command lines.
-CONFIG_POCKET_TANK_AUDIO_ES8311=n
+# The same ES8311 as the AMOLED board, on the CYD's own pins (board_pins.h).
+CONFIG_POCKET_TANK_AUDIO_ES8311=y
