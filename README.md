@@ -392,7 +392,8 @@ cd sim && make && ./fishsim
 ```
 
 The Makefile targets x86_64 by default to match an Intel Homebrew SDL2; use
-`make ARCH=` for a native build. The trained model
+`make ARCH=` for a native build. `make CYD=1` builds `fishsim-cyd`, the tank
+at the 2.8" CYD's 320 x 240 ([docs/CYD.md](docs/CYD.md)). The trained model
 (`model/out/model_q4.bin` + `tokenizer.bin`) ships in the repo, so the LLM
 brain works out of the box.
 

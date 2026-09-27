@@ -47,9 +47,9 @@ esptool --chip esp32s3 -p <port> -b 921600 read_flash 0 0x1000000 factory_16MB.b
 ## What the port changes
 
 **The tank's size is the board's.** `common/tank.h` takes `TANK_W` x `TANK_H`
-from Kconfig (`CONFIG_POCKET_TANK_BOARD_CYD28` = 320 x 240); the sim takes
-`-DTANK_W=320 -DTANK_H=240` for previews. The tank scene lays itself out from
-those two already.
+from Kconfig (`CONFIG_POCKET_TANK_BOARD_CYD28` = 320 x 240); `make CYD=1` in
+`sim/` builds the simulator at that size (`fishsim-cyd`) for previews. The
+tank scene lays itself out from those two already.
 
 **The pages scale, the pixel art does not.** `common/ui.h`: `UI(n)` is a length
 designed at 368 px of height and `UI_TEXT(s)` a text scale, both scaled to
