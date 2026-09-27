@@ -97,6 +97,13 @@ enabled low on GPIO1, so the port sets it off before the pin becomes an
 output and holds it high through deep sleep. No PMIC switches the codec's
 analog supply here; the port's call to do so finds none and does nothing.
 
+**Clock:** there is no RTC chip. ESP-IDF's system time runs on through deep
+sleep on the chip's own RTC timer, so with no chip answering, a plausible
+system time is kept and only a power-on is seeded from the build time. A
+night in deep sleep is lived through at the wake, as on the AMOLED; without
+this the re-seed put the clock behind the save's stamp and the sleep counted
+as nothing.
+
 **Touch:** the FT5x06 driver with the reset on GPIO18. On the bench the panel
 reads turned 180 degrees from the picture, and the AMOLED's 10 px
 finger-landing correction made every miss land above its button, so it is
@@ -114,17 +121,23 @@ finger-landing correction made every miss land above its button, so it is
 - Sound, on a speaker on the board's socket: the codec and amplifier up
   255 ms after the first touch, down 5 s after the last sound; 17 of the 24
   cues are in the bank.
+- Sleep on BOOT: a short press darkens the tank and light-sleeps it; a press
+  within 20 min resumes in place (a 6 s nap, the fish where they were). Past
+  that it deep-sleeps, and BOOT - or the director's timer - wakes it with a
+  boot that puts the fish back and lives the time through (240 s asleep came
+  back as 0.1 h).
 - On the I2C bus: 0x18 (the ES8311) and 0x38 (the FT6336). The AMOLED's
-  other parts are absent and say so at boot: no AXP2101, no QMI8658, and the
-  PCF85063 probe NACKs, so after a power loss the clock starts from the
-  build time.
+  other parts are absent and say so at boot: no AXP2101, no QMI8658, no
+  PCF85063.
 
 ## Still open
 
 - **Battery.** The cell's voltage reaches GPIO9 through the board's divider,
   whose ratio is still to be measured. Without a meter the battery pill and
   its page stay hidden (the page is still laid out for 448 x 368).
-- **Sleep.** The BOOT key's deep sleep (the no-PMIC path) is untried here.
+- **A power cut, or the RESET button, loses the time** (it resets the chip's
+  RTC timer too): the clock starts again from the build time, and that
+  absence is not lived through. Deep sleep keeps it.
 - **Sending while drawing.** A frame is drawn and then sent, one after the
   other; sending it while the next one is drawn would lift the ceiling at
   40 MHz to about 33 fps.
