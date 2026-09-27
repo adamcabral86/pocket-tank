@@ -104,7 +104,12 @@ finger-landing correction made every miss land above its button, so it is
 
 ## Measured (2026-09-26, the first board)
 
-- 17.5 fps: 14 ms to render, 30 ms to send a frame at 40 MHz SPI.
+- 17.5 to 21 fps at 40 MHz SPI: 5 to 14 ms to render a frame (the scene
+  decides), 30 ms to send it.
+- **80 MHz does not work on this panel.** The firmware sent a frame in 16 ms
+  (29 to 32 fps), but the glass showed stripes and no picture; back at 40
+  it is right again. The bus has no step between the two: the clock divides
+  an 80 MHz source.
 - The model: 12.7 tokens a second, 3.5 s a decision - as on the AMOLED board.
 - Sound, on a speaker on the board's socket: the codec and amplifier up
   255 ms after the first touch, down 5 s after the last sound; 17 of the 24
@@ -120,6 +125,8 @@ finger-landing correction made every miss land above its button, so it is
   whose ratio is still to be measured. Without a meter the battery pill and
   its page stay hidden (the page is still laid out for 448 x 368).
 - **Sleep.** The BOOT key's deep sleep (the no-PMIC path) is untried here.
-- **SPI at 80 MHz** would halve the 30 ms a frame spends on the wire.
+- **Sending while drawing.** A frame is drawn and then sent, one after the
+  other; sending it while the next one is drawn would lift the ceiling at
+  40 MHz to about 33 fps.
 - **The decorations** keep their pixel sizes: the castle is 146 px tall in a
   240 px tank. Worth a look on the glass.
