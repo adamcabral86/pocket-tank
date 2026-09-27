@@ -33,6 +33,9 @@ never a `/dev/ttyACM<n>`, whose numbers shuffle between plug-ins. The script
 uses ESP-IDF 5.5 (`IDF_PATH`, or `~/.espressif/esp-idf/v5.5`), its own build
 directory (`firmware/build_cyd`) and its own sdkconfig - `sdkconfig.defaults`
 with `sdkconfig.defaults.cyd` on top - so the AMOLED build is untouched.
+The defaults only fill in what an sdkconfig lacks, so a changed default would
+never reach the existing one; the script starts it afresh whenever a defaults
+file is newer.
 
 Back up the factory image before the first flash; the board then goes back
 to how it arrived with one `write_flash`:
