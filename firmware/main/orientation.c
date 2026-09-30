@@ -1,4 +1,5 @@
 /* orientation.c - see orientation.h. */
+#include "pt_nvs.h"
 #include "orientation.h"
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -9,13 +10,13 @@ static bool s_flipped;
 
 void orientation_init(void) {
     nvs_handle_t h; uint8_t v;
-    if (nvs_open("tank", NVS_READONLY, &h) != ESP_OK) return;
+    if (pt_nvs_open("tank", NVS_READONLY, &h) != ESP_OK) return;
     if (nvs_get_u8(h, "flip", &v) == ESP_OK) s_flipped = v != 0;
     nvs_close(h);
 }
 void orientation_save(void) {
     nvs_handle_t h;
-    if (nvs_open("tank", NVS_READWRITE, &h) != ESP_OK) return;
+    if (pt_nvs_open("tank", NVS_READWRITE, &h) != ESP_OK) return;
     nvs_set_u8(h, "flip", s_flipped ? 1 : 0); nvs_commit(h); nvs_close(h);
 }
 bool orientation_flipped(void) { return s_flipped; }

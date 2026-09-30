@@ -29,6 +29,9 @@
 #if CONFIG_POCKET_TANK_BOARD_CYD28
 #define TANK_W 320
 #define TANK_H 240
+#elif CONFIG_POCKET_TANK_BOARD_WS169
+#define TANK_W 280
+#define TANK_H 240
 #endif
 #endif
 #ifndef TANK_W

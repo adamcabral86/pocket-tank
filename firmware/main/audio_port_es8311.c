@@ -2,6 +2,7 @@
  * See audio_port.h. The pins, and which level turns the amplifier on, are the
  * board's (board_pins.h): the AMOLED's NS4150B is enabled high on GPIO46, the
  * CYD's amplifier low on GPIO1. */
+#include "pt_nvs.h"
 #include "audio_port.h"
 #include "board_pins.h"
 #include "audio.h"
@@ -138,7 +139,7 @@ static void player(void *arg) {
 
 static void load_volume(void) {
     nvs_handle_t h; uint8_t v;
-    if (nvs_open("tank", NVS_READONLY, &h) != ESP_OK) return;
+    if (pt_nvs_open("tank", NVS_READONLY, &h) != ESP_OK) return;
     if (nvs_get_u8(h, "snd", &v) == ESP_OK && v <= 2) s_volume = v;
     nvs_close(h);
 }
@@ -197,7 +198,7 @@ void audio_port_set_volume(int level) {
     s_volume = level < 0 ? 0 : level > 2 ? 2 : level;
     if (s_ok) { xSemaphoreTake(s_mx, portMAX_DELAY); audio_set_volume(s_volume); xSemaphoreGive(s_mx); }
     nvs_handle_t h;
-    if (nvs_open("tank", NVS_READWRITE, &h) == ESP_OK) { nvs_set_u8(h, "snd", (uint8_t)s_volume); nvs_commit(h); nvs_close(h); }
+    if (pt_nvs_open("tank", NVS_READWRITE, &h) == ESP_OK) { nvs_set_u8(h, "snd", (uint8_t)s_volume); nvs_commit(h); nvs_close(h); }
     ESP_LOGI(TAG, "volume %s", s_volume == 0 ? "off" : s_volume == 1 ? "quiet" : "normal");
 }
 int  audio_port_volume(void) { return s_volume; }

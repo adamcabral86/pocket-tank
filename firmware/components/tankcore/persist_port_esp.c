@@ -1,6 +1,7 @@
 /* persist_port_esp.c — progression ports on the device: NVS blob + wall clock.
  * Wall clock: esp time (set from the PCF85063 RTC at boot in Track 4; until
  * then it is 0 on a cold boot, which simply disables the ravenous rule). */
+#include "pt_nvs.h"
 #include "progression.h"
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -19,7 +20,7 @@ static const char *TAG = "persist";
  * tank we could not load is never overwritten by a fresh one. */
 static bool s_save_blocked;
 bool persist_port_load(void *buf, size_t max, size_t *got) {
-    nvs_handle_t h; if (nvs_open(SAVE_NVS_NS, NVS_READONLY, &h) != ESP_OK) return false;
+    nvs_handle_t h; if (pt_nvs_open(SAVE_NVS_NS, NVS_READONLY, &h) != ESP_OK) return false;
     size_t len = 0; esp_err_t e = nvs_get_blob(h, SAVE_NVS_KEY, NULL, &len);   /* the stored length first */
     if (e == ESP_OK && len == 0) e = ESP_ERR_NVS_NOT_FOUND;         /* an empty blob is nothing saved */
     if (e == ESP_OK && len <= max) e = nvs_get_blob(h, SAVE_NVS_KEY, buf, &len);
@@ -43,7 +44,7 @@ bool persist_port_load(void *buf, size_t max, size_t *got) {
 }
 bool persist_port_save(const void *buf, size_t len) {
     if (s_save_blocked) return false;
-    nvs_handle_t h; if (nvs_open(SAVE_NVS_NS, NVS_READWRITE, &h) != ESP_OK) return false;
+    nvs_handle_t h; if (pt_nvs_open(SAVE_NVS_NS, NVS_READWRITE, &h) != ESP_OK) return false;
     esp_err_t e = nvs_set_blob(h, SAVE_NVS_KEY, buf, len); if (e == ESP_OK) e = nvs_commit(h);
     nvs_close(h); if (e != ESP_OK) ESP_LOGW(TAG, "save failed: %s", esp_err_to_name(e));
     return e == ESP_OK;
@@ -51,7 +52,7 @@ bool persist_port_save(const void *buf, size_t len) {
 /* the keeper's reset: the whole "tank" namespace goes - "save" and the
  * director's parked "bk" alike - so nothing can bring the old tank back */
 bool persist_port_erase(void) {
-    nvs_handle_t h; if (nvs_open(SAVE_NVS_NS, NVS_READWRITE, &h) != ESP_OK) return false;
+    nvs_handle_t h; if (pt_nvs_open(SAVE_NVS_NS, NVS_READWRITE, &h) != ESP_OK) return false;
     esp_err_t e = nvs_erase_all(h); if (e == ESP_OK) e = nvs_commit(h);
     nvs_close(h);
     if (e != ESP_OK) ESP_LOGW(TAG, "erase failed: %s", esp_err_to_name(e));

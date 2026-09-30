@@ -1,3 +1,4 @@
+#include "pt_nvs.h"
 #include "brightness.h"
 #include "display_port.h"
 #include "nvs_flash.h"
@@ -9,13 +10,13 @@ static int s_pct = 100, s_applied = -1;
 
 void brightness_init(void) {
     nvs_handle_t h; uint8_t v;
-    if (nvs_open("tank", NVS_READONLY, &h) != ESP_OK) return;
+    if (pt_nvs_open("tank", NVS_READONLY, &h) != ESP_OK) return;
     if (nvs_get_u8(h, "bright", &v) == ESP_OK && (v == 30 || v == 60 || v == 100)) s_pct = v;
     nvs_close(h);
 }
 void brightness_save(void) {
     nvs_handle_t h;
-    if (nvs_open("tank", NVS_READWRITE, &h) != ESP_OK) return;
+    if (pt_nvs_open("tank", NVS_READWRITE, &h) != ESP_OK) return;
     nvs_set_u8(h, "bright", (uint8_t)s_pct); nvs_commit(h); nvs_close(h);
 }
 int brightness_level(void) { return s_pct; }

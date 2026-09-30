@@ -9,7 +9,13 @@ menu "pocket-tank"
             bool "Waveshare ESP32-S3-Touch-AMOLED-1.8 (448x368)"
         config POCKET_TANK_BOARD_CYD28
             bool "2.8in ESP32-S3 CYD, ES3C28P: ILI9341 + FT6336 (320x240)"
+        config POCKET_TANK_BOARD_WS169
+            bool "Waveshare ESP32-S3-Touch-LCD-1.69: ST7789 + CST816 (280x240), dual-booted with XR TAK"
     endchoice
+    config POCKET_TANK_DISPLAY_ST7789
+        bool "Drive the Waveshare 1.69in ST7789 over SPI, backlight PWM on GPIO15"
+        depends on POCKET_TANK_BOARD_WS169
+        default n
     config POCKET_TANK_DISPLAY_ILI9341
         bool "Drive the CYD's ILI9341 over SPI, backlight PWM on GPIO45"
         depends on POCKET_TANK_BOARD_CYD28

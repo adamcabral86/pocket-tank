@@ -3,6 +3,8 @@ if(CONFIG_POCKET_TANK_DISPLAY_SH8601)
     list(APPEND SRCS display_port_sh8601.c)
 elseif(CONFIG_POCKET_TANK_DISPLAY_ILI9341)
     list(APPEND SRCS display_port_ili9341.c)
+elseif(CONFIG_POCKET_TANK_DISPLAY_ST7789)
+    list(APPEND SRCS display_port_st7789.c)
 else()
     list(APPEND SRCS display_port_stub.c)
 endif()
@@ -19,6 +21,6 @@ endif()
 idf_component_register(
     SRCS ${SRCS}
     INCLUDE_DIRS "."
-    REQUIRES tankcore llm esp_partition spi_flash esp_timer esp_driver_spi esp_driver_i2c esp_driver_i2s esp_driver_gpio esp_driver_usb_serial_jtag esp_lcd nvs_flash esp_app_format
+    REQUIRES tankcore llm esp_partition spi_flash esp_timer esp_driver_spi esp_driver_i2c esp_driver_i2s esp_driver_gpio esp_driver_usb_serial_jtag esp_lcd nvs_flash esp_app_format app_update
     EMBED_FILES "tokenizer.bin" "../../assets/sounds/sounds.bin"
 )

@@ -2021,15 +2021,17 @@ static void snail_card_draw(ctx_t *c, const tank_t *t) {
 /* the shrimp school's card (2026-09-29, Strato: "one tap should bring up a
    card to show how much food they've eaten and progress to the next shrimp").
    The pips fill with pellets - filled vs hollow, never colour alone. */
-#define SHRIMP_CARD_W 336
-#define SHRIMP_CARD_H 190
+/* Scaled with ui.h like the other cards (2026-09-30): at a fixed 336 x 190 it was
+   wider than the 1.69in watch's 280 x 240 tank. */
+#define SHRIMP_CARD_W UI(336)
+#define SHRIMP_CARD_H UI(190)
 static void shrimp_card_draw(ctx_t *c, const tank_t *t) {
     int n = t->shrimp_n;
     float cx = 0, cy = 0, r = 0;
     for (int i = 0; i < n; i++) { cx += t->shrimp[i].x; cy += t->shrimp[i].y; }
     cx /= n; cy /= n;
     for (int i = 0; i < n; i++) { float d = tank_dist(cx, cy, t->shrimp[i].x, t->shrimp[i].y); if (d > r) r = d; }
-    ring(c, cx, cy, fminf(fmaxf(r + 14, 22), 90), 0x9fd8e2);
+    ring(c, cx, cy, fminf(fmaxf(r + UI(14), UI(22)), UI(90)), 0x9fd8e2);
     const int W = SHRIMP_CARD_W, H = SHRIMP_CARD_H, X = (TANK_W - W) / 2, Y = (TANK_H - H) / 2;
     src_t bg = src_color(0x04141a, 1.0f);
     for (int y = Y; y < Y + H; y++) span(c, X, X + W - 1, y, &bg, 235);
@@ -2038,7 +2040,7 @@ static void shrimp_card_draw(ctx_t *c, const tank_t *t) {
     src_t pal[SHRIMP_TONES];
     for (int k = 0; k < SHRIMP_TONES; k++) pal[k] = src_color(SHRIMP_RGB[k], 1.0f);
     const char *const *fr = fmodf(t->clock * 2.5f, 1) < 0.5f ? SHRIMP_IDLE_A : SHRIMP_IDLE_B;
-    const int S = 4, sx = X + (W - 18 * S) / 2, sy = Y + 8;
+    const int S = UI_COMPACT ? 3 : 4, sx = X + (W - 18 * S) / 2, sy = Y + UI(8);
     for (int y = 0; y < 8; y++)
         for (int x = 0; x < 18; x++) {
             const char *k = fr[y][x] == '.' ? NULL : strchr(SHRIMP_KEYS, fr[y][x]);
@@ -2048,20 +2050,20 @@ static void shrimp_card_draw(ctx_t *c, const tank_t *t) {
         }
     char line[32];
     snprintf(line, sizeof line, "%d SHRIMP", n);
-    draw_text(c, X + (W - text_w(line, 3)) / 2, Y + 46, 3, 0xffffff, line);
+    draw_text(c, X + (W - text_w(line, UI_TEXT(3))) / 2, Y + UI(46), UI_TEXT(3), 0xffffff, line);
     snprintf(line, sizeof line, "%d PELLET%s EATEN", (int)t->shrimp_eaten, t->shrimp_eaten == 1 ? "" : "S");
-    draw_text(c, X + (W - text_w(line, 2)) / 2, Y + 76, 2, 0x9fd8e2, line);
+    draw_text(c, X + (W - text_w(line, UI_TEXT(2))) / 2, Y + UI(76), UI_TEXT(2), 0x9fd8e2, line);
     const char *cap = "NEXT SHRIMP";
-    draw_text(c, X + (W - text_w(cap, 2)) / 2, Y + 104, 2, 0x9fd8e2, cap);
+    draw_text(c, X + (W - text_w(cap, UI_TEXT(2))) / 2, Y + UI(104), UI_TEXT(2), 0x9fd8e2, cap);
     bool full = n >= SHRIMP_MAX;
     int have = full ? SHRIMP_PER_JOIN : t->shrimp_food;
-    const int pitch = 22, px0 = X + (W - (SHRIMP_PER_JOIN - 1) * pitch) / 2, py = Y + 132;
+    const int pitch = UI(22), px0 = X + (W - (SHRIMP_PER_JOIN - 1) * pitch) / 2, py = Y + UI(132);
     for (int i = 0; i < SHRIMP_PER_JOIN; i++) {
         float x = px0 + i * pitch;
         if (i < have) {
-            fill_ellipse(c, x, py, 6.5f, 6.5f, 0xffbd59, 255);
-            fill_ellipse(c, x - 2, py - 2, 2.2f, 2.2f, 0xffe9bd, 255);
-        } else ring(c, x, py, 6, 0x5a6a6e);
+            fill_ellipse(c, x, py, 6.5f * UI_F, 6.5f * UI_F, 0xffbd59, 255);
+            fill_ellipse(c, x - UI(2), py - UI(2), 2.2f * UI_F, 2.2f * UI_F, 0xffe9bd, 255);
+        } else ring(c, x, py, UI(6), 0x5a6a6e);
     }
     if (full) snprintf(line, sizeof line, "THE SCHOOL IS FULL");
     else if (tank_shrimp_refusing(t)) snprintf(line, sizeof line, "TOO MUCH ALGAE TO EAT");
@@ -2072,7 +2074,7 @@ static void shrimp_card_draw(ctx_t *c, const tank_t *t) {
         int more = SHRIMP_PER_JOIN - t->shrimp_food;
         snprintf(line, sizeof line, "%d MORE PELLET%s", more, more == 1 ? "" : "S");
     }
-    draw_text(c, X + (W - text_w(line, 2)) / 2, Y + 158, 2, 0xffffff, line);
+    draw_text(c, X + (W - text_w(line, UI_TEXT(2))) / 2, Y + UI(158), UI_TEXT(2), 0xffffff, line);
 }
 
 void render_stats_card(const tank_t *t, int fish_idx, uint16_t *fb, int stride) {

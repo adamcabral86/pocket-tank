@@ -2,6 +2,7 @@
  * RX only through the USB-Serial-JTAG driver; the log keeps its polled
  * (no-driver) write path so an unattended tank never blocks on a host that
  * isn't reading. Called from the tank task, so no locking. */
+#include "pt_nvs.h"
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -35,7 +36,7 @@ static const char *TAG = "director";
  * The staged tank autosaves over "save" like any other; `restore` copies "bk"
  * back and reboots progression from it. */
 static bool nvs_copy(const char *from, const char *to) {
-    nvs_handle_t h; if (nvs_open("tank", NVS_READWRITE, &h) != ESP_OK) return false;
+    nvs_handle_t h; if (pt_nvs_open("tank", NVS_READWRITE, &h) != ESP_OK) return false;
     size_t len = 0; bool ok = false;
     if (nvs_get_blob(h, from, NULL, &len) == ESP_OK && len > 0) {
         void *buf = malloc(len);
@@ -46,12 +47,12 @@ static bool nvs_copy(const char *from, const char *to) {
     nvs_close(h); return ok;
 }
 static bool nvs_has(const char *key) {
-    nvs_handle_t h; if (nvs_open("tank", NVS_READONLY, &h) != ESP_OK) return false;
+    nvs_handle_t h; if (pt_nvs_open("tank", NVS_READONLY, &h) != ESP_OK) return false;
     size_t len = 0; bool ok = nvs_get_blob(h, key, NULL, &len) == ESP_OK && len > 0;
     nvs_close(h); return ok;
 }
 static void nvs_drop(const char *key) {
-    nvs_handle_t h; esp_err_t e = nvs_open("tank", NVS_READWRITE, &h);
+    nvs_handle_t h; esp_err_t e = pt_nvs_open("tank", NVS_READWRITE, &h);
     if (e == ESP_OK) { e = nvs_erase_key(h, key); if (e == ESP_OK) e = nvs_commit(h); nvs_close(h); }
     if (e != ESP_OK) ESP_LOGW(TAG, "drop %s failed: %s", key, esp_err_to_name(e));
     else if (nvs_has(key)) ESP_LOGW(TAG, "drop %s: still there after the erase", key);

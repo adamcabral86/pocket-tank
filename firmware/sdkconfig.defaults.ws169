@@ -1,0 +1,11 @@
+# The Waveshare ESP32-S3-Touch-LCD-1.69, dual-booted with XR TAK: layered over
+# sdkconfig.defaults. 16 MB flash and 8 MB octal PSRAM, as the AMOLED board.
+# The tank runs from ota_1 of XR TAK's table (partitions_ws169.csv) and is
+# flashed there and to the model partition only - never with the web installer.
+CONFIG_POCKET_TANK_BOARD_WS169=y
+CONFIG_POCKET_TANK_DISPLAY_SH8601=n
+CONFIG_POCKET_TANK_DISPLAY_ST7789=y
+CONFIG_POCKET_TANK_TOUCH_FT3168=y
+# No codec on this board, only a buzzer: the stub audio port.
+CONFIG_POCKET_TANK_AUDIO_ES8311=n
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_ws169.csv"

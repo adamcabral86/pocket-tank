@@ -21,6 +21,12 @@ const char *const TMS_NAMES[TMS_COUNT] = {
     "first trimming", "first glass cleaning",
 };
 
+/* The algae grid in the save is always the AMOLED's 28 x 23: its size is part
+ * of the frozen layout (SAVE LAYOUT LOCK below), and a smaller tank's grid (the
+ * CYD's 20 x 15, the 1.69in watch's 17 x 15) fills the front of it. Sizing it by
+ * the tank instead moved every field after it on those boards. */
+#define SAVE_ALGAE_CELLS (28 * 23)
+_Static_assert(ALGAE_CELLS <= SAVE_ALGAE_CELLS, "the tank's algae grid must fit the save's");
 typedef struct {
     uint8_t preset, stage; uint16_t pad;
     float size, trust, bold, sociable, bold0, sociable0, hunger, energy, stress, curiosity;
@@ -45,7 +51,7 @@ typedef struct {
      * growth - the floor is VEG_NUB - so restore treats it as "keep the
      * fresh-tank default"). ---- */
     float    veg_growth[VEG_BEDS];
-    uint8_t  algae[ALGAE_CELLS];
+    uint8_t  algae[SAVE_ALGAE_CELLS];   /* the AMOLED's grid; a smaller tank uses the front */
     int32_t  trims, cells_cleaned;
     /* per-frond heights (2026-09-04); an older save (no tail, or zeros)
      * seeds every frond from its bed's veg_growth */

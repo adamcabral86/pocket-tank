@@ -4,6 +4,9 @@
  * Boot: assert the PSRAM plan, mmap the model partition, start both loops.
  * Without a panel (QEMU / bring-up) the display port is a counting stub and
  * every decision + tok/s goes to the log. */
+#include "board_pins.h"
+#include "esp_ota_ops.h"
+#include "pt_nvs.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -55,7 +58,7 @@
  * be the one key the keeper ever presses - press to sleep, press to wake. */
 #define BTN_SLEEP GPIO_NUM_0
 static bool s_pmic;                        /* an AXP2101 answered: the PWR key exists, power-off is real */
-#if defined(CONFIG_POCKET_TANK_DISPLAY_SH8601) || defined(CONFIG_POCKET_TANK_DISPLAY_ILI9341)
+#if defined(CONFIG_POCKET_TANK_DISPLAY_SH8601) || defined(CONFIG_POCKET_TANK_DISPLAY_ILI9341) || defined(CONFIG_POCKET_TANK_DISPLAY_ST7789)
 extern i2c_master_bus_handle_t board_i2c_bus(void);
 #else
 static i2c_master_bus_handle_t board_i2c_bus(void) { return NULL; }
@@ -292,6 +295,18 @@ static void pwr_key_poll(int64_t now) {
  * count. With no PMIC (so no PWR key) a short press, at RELEASE, is the sleep
  * key as it was until 2026-09-16; a chord press never is. */
 #define BTN_DEBOUNCE_US 50000
+#if CONFIG_POCKET_TANK_BOARD_WS169
+/* Dual boot (XR TAK in ota_0, the tank in ota_1): BOOT held this long hands the
+ * watch back to XR TAK. A short press still sleeps; BOOT + tap is still reset. */
+#define BACK_TO_XRTAK_US 3000000
+static void back_to_xrtak(void) {
+    const esp_partition_t *xrtak = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_0, NULL);
+    if (!xrtak || esp_ota_set_boot_partition(xrtak) != ESP_OK) { ESP_LOGE(TAG, "no XR TAK in ota_0 to go back to"); return; }
+    ESP_LOGI(TAG, "BOOT held: back to XR TAK");
+    progression_save(&tank);                 /* the tank as it is, for next time */
+    esp_restart();
+}
+#endif
 static void sleep_button_poll(int64_t now) {
     if (gpio_get_level(BTN_SLEEP)) {
         if (!s_pmic && s_btn_armed && s_btn_low_since && !s_btn_used && now - s_btn_low_since >= BTN_DEBOUNCE_US)
@@ -304,6 +319,12 @@ static void sleep_button_poll(int64_t now) {
             ESP_LOGI(TAG, "BOOT + tap: reset prompt");
             touch_port_confirm_open();
         }
+#if CONFIG_POCKET_TANK_BOARD_WS169
+        else if (!s_btn_used && now - s_btn_low_since >= BACK_TO_XRTAK_US) {
+            s_btn_used = true;
+            back_to_xrtak();
+        }
+#endif
     }
 }
 
@@ -354,7 +375,7 @@ void device_fake_battery(int pct, int state) {
 }
 static void bat_hist_load(void) {
     nvs_handle_t h; bat_hist_t b; size_t len = sizeof b; bool ok = false;
-    if (nvs_open("bat", NVS_READONLY, &h) == ESP_OK) { ok = nvs_get_blob(h, "hist", &b, &len) == ESP_OK && len == sizeof b; nvs_close(h); }
+    if (pt_nvs_open("bat", NVS_READONLY, &h) == ESP_OK) { ok = nvs_get_blob(h, "hist", &b, &len) == ESP_OK && len == sizeof b; nvs_close(h); }
     battery_init(&s_bh, ok ? &b : NULL);
     if (ok) ESP_LOGI(TAG, "battery history: %s since %lld, screen on %u min, drain %s%.1f %%/h, charge %s%.1f %%/h",
                      b.on_power ? "on the cable" : "on battery", (long long)b.since_unix, (unsigned)(b.awake_s / 60),
@@ -362,7 +383,7 @@ static void bat_hist_load(void) {
                      b.charge_x10 ? "" : "(default) ", b.charge_x10 ? b.charge_x10 / 10.0 : BAT_CHARGE_DEFAULT);
 }
 static void bat_hist_save(void) {
-    nvs_handle_t h; if (nvs_open("bat", NVS_READWRITE, &h) != ESP_OK) return;
+    nvs_handle_t h; if (pt_nvs_open("bat", NVS_READWRITE, &h) != ESP_OK) return;
     if (nvs_set_blob(h, "hist", &s_bh.h, sizeof s_bh.h) == ESP_OK) nvs_commit(h);
     nvs_close(h);
 }
@@ -598,13 +619,13 @@ const char *version_port_string(void) { return esp_app_get_description()->versio
  * runs without saving until a build that can read it is back. */
 #define NVS_RESCUE_SIZE 0x6000
 static void nvs_start(void) {
-    esp_err_t e = nvs_flash_init();
+    esp_err_t e = nvs_flash_init_partition(PT_NVS_PART);
     if (e == ESP_OK) return;
     if (e != ESP_ERR_NVS_NO_FREE_PAGES) {
         ESP_LOGE(TAG, "NVS init: %s - running WITHOUT saving; the saved tank is left as it is", esp_err_to_name(e));
         return;
     }
-    const esp_partition_t *nvs = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, NULL);
+    const esp_partition_t *nvs = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, PT_NVS_PART);
     const esp_partition_t *st  = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "storage");
     uint8_t *raw = nvs && nvs->size <= NVS_RESCUE_SIZE ? heap_caps_malloc(nvs->size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT) : NULL;
     bool kept = raw && st && st->size >= NVS_RESCUE_SIZE
@@ -617,8 +638,8 @@ static void nvs_start(void) {
         return;
     }
     ESP_LOGE(TAG, "NVS init: no free pages - raw copy at storage+0 (0x%lx), erasing NVS", (unsigned long)st->address);
-    nvs_flash_erase();
-    nvs_flash_init();
+    nvs_flash_erase_partition(PT_NVS_PART);
+    nvs_flash_init_partition(PT_NVS_PART);
 }
 
 void app_main(void) {
@@ -628,6 +649,20 @@ void app_main(void) {
                           .pull_up_en = GPIO_PULLUP_ENABLE };
     gpio_config(&btn);
     gpio_deep_sleep_hold_dis();              /* a deep-sleep wake is a boot: the night's pad holds end here */
+#if CONFIG_POCKET_TANK_BOARD_WS169
+    /* The watch stays powered on battery only while SYS_EN is high: without this
+       it switches itself off the moment the power button is released. A restart
+       resets every pin, so XR TAK latches this one high (gpio_hold_en) before
+       handing over, and it is set up as output-high HERE, before the latch lets
+       go, so it never drops for an instant: a gap of a third of a second, pin low
+       between XR TAK's restart and this line, was the watch switching off on
+       battery. Latched again after, for the restart back and for deep sleep. */
+    gpio_set_level(PIN_POWER_HOLD, 1);
+    gpio_set_direction(PIN_POWER_HOLD, GPIO_MODE_OUTPUT);
+    gpio_hold_dis(PIN_POWER_HOLD);
+    gpio_set_level(PIN_POWER_HOLD, 1);
+    gpio_hold_en(PIN_POWER_HOLD);
+#endif
     nvs_start();
     { int carried = batlog_init();       /* the battery log survives every reset but a power-on */
       if (carried) ESP_LOGI(TAG, "batlog: %d samples carried through the reset (director `batlog` reads them)", carried); }

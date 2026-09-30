@@ -31,6 +31,26 @@
 #define PIN_I2S_DOUT      8        /* ESP -> codec DSDIN; GPIO6 is the microphone's way back, unused */
 #define PIN_AMP_EN        1
 #define AMP_EN_ON         0        /* the spec: "low level enable" */
+#elif CONFIG_POCKET_TANK_BOARD_WS169
+/* The Waveshare ESP32-S3-Touch-LCD-1.69, as XR TAK drives it (XRTAK-HUD's
+ * platformio.ini and config.h, all confirmed on the watch). */
+#define PIN_LCD_CS        5
+#define PIN_LCD_DC        4
+#define PIN_LCD_SCLK      6
+#define PIN_LCD_MOSI      7
+#define PIN_LCD_RST       8
+#define PIN_LCD_BL        15       /* high = backlight on; PWM for brightness */
+#define PIN_I2C_SDA       11       /* shared: touch and the QMI8658 */
+#define PIN_I2C_SCL       10
+#define PIN_TP_RST        13       /* low = reset */
+#define PIN_TP_INT        14       /* the port polls instead */
+#define I2C_ADDR_CST816   0x15
+#define PANEL_W           240      /* native portrait; the panel scans landscape (MADCTL) */
+#define PANEL_H           280
+/* SYS_EN: on battery the board stays powered only while this is held high. */
+#define PIN_POWER_HOLD    41
+#define PIN_BATTERY_ADC   1        /* through a 200k/100k divider: VBAT = 3 x the pin */
+#define PIN_BUZZER        42
 #else
 #define PIN_LCD_CS        12
 #define PIN_LCD_PCLK      11

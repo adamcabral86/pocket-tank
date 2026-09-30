@@ -53,9 +53,10 @@ static bool s_inverted;                           /* screen 180-flipped: mirror 
  * same reason; Strato saw it on the swatch rows, 2026-09-13). Reported
  * points move UP by this many px in displayed space; director `touch bias
  * <px>` tunes it live. */
-#if CONFIG_POCKET_TANK_BOARD_CYD28
+#if CONFIG_POCKET_TANK_BOARD_CYD28 || CONFIG_POCKET_TANK_BOARD_WS169
 /* None on the CYD (2026-09-26): with the AMOLED's 10 px every missed button
- * in the first setup walk-through read ABOVE the button, never below it. */
+ * in the first setup walk-through read ABOVE the button, never below it. The
+ * watch starts at none as well; director `touch bias` tunes it. */
 static int s_bias_y = 0;
 #else
 static int s_bias_y = 10;
@@ -90,6 +91,21 @@ bool touch_port_init(void) {
     ESP_LOGI(TAG, "FT6336 ready");
     return true;
 }
+#elif CONFIG_POCKET_TANK_BOARD_WS169
+/* The watch's CST816 at 0x15 on the shared bus, reset on GPIO13, reporting in
+ * the panel's own portrait frame; touch_port_poll turns it landscape the way
+ * XR TAK does on the same board. */
+bool touch_port_init(void) {
+    esp_lcd_panel_io_handle_t io;
+    esp_lcd_panel_io_i2c_config_t io_cfg = ESP_LCD_TOUCH_IO_I2C_CST816S_CONFIG();
+    io_cfg.dev_addr = I2C_ADDR_CST816; io_cfg.scl_speed_hz = 400000;
+    if (esp_lcd_new_panel_io_i2c(board_i2c_bus(), &io_cfg, &io) != ESP_OK) { ESP_LOGW(TAG, "no touch io"); return false; }
+    esp_lcd_touch_config_t tp_cfg = { .x_max = PANEL_W, .y_max = PANEL_H, .rst_gpio_num = PIN_TP_RST, .int_gpio_num = -1,
+        .levels = { .reset = 0, .interrupt = 0 }, .flags = { .swap_xy = 0, .mirror_x = 0, .mirror_y = 0 } };
+    if (esp_lcd_touch_new_i2c_cst816s(io, &tp_cfg, &s_tp) != ESP_OK) { ESP_LOGW(TAG, "no CST816"); return false; }
+    ESP_LOGI(TAG, "CST816 ready");
+    return true;
+}
 #else
 bool touch_port_init(void) {
     esp_lcd_panel_io_handle_t io;
@@ -121,6 +137,11 @@ void touch_port_poll(tank_t *t) {
        flipped screen undoes the turn */
     float tx = touched ? (s_inverted ? (float)x[0] : (float)(TANK_W - 1 - x[0])) : s_lx;
     float ty = touched ? (s_inverted ? (float)y[0] : (float)(TANK_H - 1 - y[0])) - s_bias_y : s_ly;
+#elif CONFIG_POCKET_TANK_BOARD_WS169
+    /* portrait (px,py) -> landscape, the right way up on the watch (the display
+     * port's MV | MY): tx = TANK_W-1-py, ty = px; a flipped screen mirrors both */
+    float tx = touched ? (s_inverted ? (float)y[0] : (float)(TANK_W - 1 - y[0])) : s_lx;
+    float ty = touched ? (s_inverted ? (float)(TANK_H - 1 - x[0]) : (float)x[0]) - s_bias_y : s_ly;
 #else
     /* portrait panel (px,py) -> landscape tank (tx,ty): tx = TANK_W-1-py, ty = px;
      * flipped screen: mirror both, so downstream gestures live in displayed space */
