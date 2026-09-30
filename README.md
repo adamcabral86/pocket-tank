@@ -422,7 +422,8 @@ cd sim && make && ./fishsim
 
 On macOS the Makefile targets x86_64 by default to match an Intel Homebrew
 SDL2; use `make ARCH=` for a native build. On Linux it builds for the host.
-The trained model
+`make CYD=1` builds `fishsim-cyd`, the tank at the 2.8" CYD's 320 x 240
+([docs/CYD.md](docs/CYD.md)). The trained model
 (`model/out/model_q4.bin` + `tokenizer.bin`) ships in the repo, so the LLM
 brain works out of the box.
 
@@ -542,6 +543,11 @@ built or tested here, and they may lag behind this repo:
   [Pull request #10](https://github.com/mediacutlet/pocket-tank/pull/10) has
   the details.
 
+**The 2.8" ESP32-S3 CYD** (ES3C28P: an ILI9341 over SPI, FT6336 touch,
+320 x 240) builds from this tree too, with `tools/build_cyd.sh`; the pages
+are scaled or laid out for its shorter screen. [docs/CYD.md](docs/CYD.md)
+has the board, the build and what the port changed.
+
 ## Train your own
 
 The whole distillation pipeline is here. `model/gen_traces.py` runs the
@@ -596,6 +602,7 @@ seven-minute prompt check before an overnight run is always worth it.
 - [docs/AUDIO.md](docs/AUDIO.md) — the sound design: the cues, the asset pipeline, the power rules
 - [docs/memory_budget.md](docs/memory_budget.md) — flash, PSRAM, and SRAM plan
 - [docs/bringup.md](docs/bringup.md) — hardware bring-up checklist
+- [docs/CYD.md](docs/CYD.md) — the 2.8" ESP32-S3 CYD: the board, building, what the port changed
 
 ## Status
 
