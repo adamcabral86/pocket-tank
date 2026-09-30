@@ -1,4 +1,10 @@
-set(SRCS main.c director.c brightness.c orientation.c batlog.c codec_port.c advisor_llm_esp.c battery_port_axp2101.c imu_port_qmi8658.c)
+set(SRCS main.c director.c brightness.c orientation.c batlog.c codec_port.c advisor_llm_esp.c imu_port_qmi8658.c)
+# The watch has no PMIC: its battery is a voltage on an ADC pin.
+if(CONFIG_POCKET_TANK_BOARD_WS169)
+    list(APPEND SRCS battery_port_adc.c)
+else()
+    list(APPEND SRCS battery_port_axp2101.c)
+endif()
 if(CONFIG_POCKET_TANK_DISPLAY_SH8601)
     list(APPEND SRCS display_port_sh8601.c)
 elseif(CONFIG_POCKET_TANK_DISPLAY_ILI9341)
@@ -21,6 +27,6 @@ endif()
 idf_component_register(
     SRCS ${SRCS}
     INCLUDE_DIRS "."
-    REQUIRES tankcore llm esp_partition spi_flash esp_timer esp_driver_spi esp_driver_i2c esp_driver_i2s esp_driver_gpio esp_driver_usb_serial_jtag esp_lcd nvs_flash esp_app_format app_update
+    REQUIRES tankcore llm esp_partition spi_flash esp_timer esp_driver_spi esp_driver_i2c esp_driver_i2s esp_driver_gpio esp_driver_usb_serial_jtag esp_lcd nvs_flash esp_app_format app_update esp_adc
     EMBED_FILES "tokenizer.bin" "../../assets/sounds/sounds.bin"
 )
