@@ -26,6 +26,7 @@ bool touch_port_confirm_up(void);
 float touch_port_confirm_frac(void);           /* time left before it gives up, 1 -> 0 */
 int  touch_port_confirm_take(void);            /* +1 / -1 once, then 0 */
 bool touch_port_pressed_since(int64_t us);     /* a finger is down and landed after `us` */
+int64_t touch_port_last_touch_us(void);         /* when a finger was last on the glass (esp_timer) */
 /* the settings page (2026-09-15): opened from the milestones page's SETTINGS
  * button; a tap on a segment is handed to main as SET_TAP_BRIGHT / _VOLUME
  * with its value (one-shot), CLOSE ends the page */

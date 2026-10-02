@@ -201,11 +201,17 @@ static void enter_sleep_for(int wake_after_s) {
         int64_t left = grace_us - (esp_timer_get_time() - t0);
         if (left <= 0) break;
         gpio_wakeup_enable(BTN_SLEEP, GPIO_INTR_LOW_LEVEL);
+#if CONFIG_POCKET_TANK_BOARD_WS169
+        gpio_wakeup_enable(PIN_TP_INT, GPIO_INTR_LOW_LEVEL);   /* a tap on the glass, as well as BOOT */
+#endif
         esp_sleep_enable_gpio_wakeup();
         esp_sleep_enable_timer_wakeup(left < KEY_POLL_US ? left : KEY_POLL_US);
         esp_light_sleep_start();
         esp_sleep_wakeup_cause_t why = esp_sleep_get_wakeup_cause();
         gpio_wakeup_disable(BTN_SLEEP);
+#if CONFIG_POCKET_TANK_BOARD_WS169
+        gpio_wakeup_disable(PIN_TP_INT);
+#endif
         /* wake sources are STICKY in ESP-IDF (s_config.wakeup_triggers): the
          * grace's timer would otherwise follow us into stage 2 and boot the
          * tank 90 s later - which it did (2026-09-14: every sleep since the
@@ -248,6 +254,11 @@ static void deep_sleep_now(int wake_after_s) {
     ESP_LOGI(TAG, "deep sleep (BOOT wakes%s)", wake_after_s > 0 ? ", or the timer" : "");
     rtc_gpio_pullup_en(BTN_SLEEP); rtc_gpio_pulldown_dis(BTN_SLEEP);
     esp_sleep_enable_ext0_wakeup(BTN_SLEEP, 0);
+#if CONFIG_POCKET_TANK_BOARD_WS169
+    /* and a tap: the touch controller stays powered and pulls its interrupt low */
+    rtc_gpio_pullup_en(PIN_TP_INT); rtc_gpio_pulldown_dis(PIN_TP_INT);
+    esp_sleep_enable_ext1_wakeup(1ULL << PIN_TP_INT, ESP_EXT1_WAKEUP_ANY_LOW);
+#endif
     if (wake_after_s > 0) esp_sleep_enable_timer_wakeup((int64_t)wake_after_s * 1000000);
     audio_port_deep_sleep_pins();
     gpio_deep_sleep_hold_en();
@@ -439,6 +450,23 @@ static void reset_tank(void) {
     setup_begin(&tank);                         /* welcome, names, colours - as on a fresh install */
 }
 
+#if CONFIG_POCKET_TANK_BOARD_WS169
+/* On the watch the tank sleeps after two minutes with nobody touching it, as XR
+ * TAK's screen does: screen off, the grace, then deep sleep, and a tap on the
+ * glass brings it back at either stage. Touch only: on a wrist the IMU never
+ * stops moving. A setup page or a prompt holds it awake. */
+#define IDLE_SLEEP_US (2LL * 60 * 1000000)
+static int64_t s_awake_since;
+static void idle_sleep_poll(int64_t now) {
+    if (!s_awake_since) s_awake_since = now;
+    if (setup_active() || touch_port_confirm_up()) return;
+    if (now - touch_port_last_touch_us() < IDLE_SLEEP_US || now - s_awake_since < IDLE_SLEEP_US) return;
+    ESP_LOGI(TAG, "two minutes untouched: sleeping (a tap wakes it)");
+    enter_sleep();                                  /* returns only on a wake within the grace */
+    s_awake_since = esp_timer_get_time();
+}
+#endif
+
 static void tank_task(void *arg) {
     (void)arg;
     int64_t last = esp_timer_get_time(); int cur = 0;
@@ -449,6 +477,9 @@ static void tank_task(void *arg) {
         float dt = (now - last) / 1e6f; last = now; if (dt > 0.25f) dt = 0.25f;
         sleep_button_poll(now);
         pwr_key_poll(now);
+#if CONFIG_POCKET_TANK_BOARD_WS169
+        idle_sleep_poll(now);
+#endif
         imu_port_poll(now);
         if (imu_port_moving()) audio_port_prewarm();   /* in a hand: the codec stays warm (docs/AUDIO.md) */
         if (imu_port_handled()) tank_handled(&tank);   /* ... and the light stays on (two polls of motion: a bump on the desk is not a pick-up) */
@@ -662,6 +693,12 @@ void app_main(void) {
     gpio_hold_dis(PIN_POWER_HOLD);
     gpio_set_level(PIN_POWER_HOLD, 1);
     gpio_hold_en(PIN_POWER_HOLD);
+    /* The touch controller's interrupt: polled for touches, but the line that wakes
+       a sleeping tank on a tap. */
+    rtc_gpio_deinit(PIN_TP_INT);
+    gpio_config_t tp_int = { .pin_bit_mask = 1ULL << PIN_TP_INT, .mode = GPIO_MODE_INPUT,
+                             .pull_up_en = GPIO_PULLUP_ENABLE };
+    gpio_config(&tp_int);
 #endif
     nvs_start();
     { int carried = batlog_init();       /* the battery log survives every reset but a power-on */
@@ -731,7 +768,8 @@ void app_main(void) {
     rtc_port_init(board_i2c_bus());   /* wall clock for the ravenous rule */
     tank_init(&tank, (uint32_t)esp_timer_get_time() ^ 0xC0FFEEu);
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
-    bool from_sleep = cause == ESP_SLEEP_WAKEUP_EXT0 || cause == ESP_SLEEP_WAKEUP_TIMER;
+    bool from_sleep = cause == ESP_SLEEP_WAKEUP_EXT0 || cause == ESP_SLEEP_WAKEUP_TIMER
+                   || cause == ESP_SLEEP_WAKEUP_EXT1;          /* the watch's tap on the glass */
     if (from_sleep) {                        /* the night, lived through in one step */
         float h = progression_wake(&tank, clock_port_now_unix());
         ESP_LOGI(TAG, "wake from deep sleep (%s): %s%.1f h simulated | hunger[0] %.1f | battery %d%% %d mV",

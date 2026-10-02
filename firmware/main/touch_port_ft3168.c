@@ -65,6 +65,9 @@ void touch_port_set_bias(int px) { s_bias_y = px; }
 int  touch_port_bias(void) { return s_bias_y; }
 
 void touch_port_set_inverted(bool inverted) { s_inverted = inverted; }
+/* Starts at boot: a tank nobody has touched yet has been idle since then. */
+static int64_t s_last_touch_us;
+int64_t touch_port_last_touch_us(void) { return s_last_touch_us; }
 extern i2c_master_bus_handle_t board_i2c_bus(void);
 extern bool board_is_v2(void);
 
@@ -149,6 +152,7 @@ void touch_port_poll(tank_t *t) {
     float ty = touched ? (s_inverted ? (float)(TANK_H - 1 - x[0]) : (float)x[0]) - s_bias_y : s_ly;
 #endif
     if (touched && ty < 0) ty = 0;
+    if (touched) s_last_touch_us = now;
     if (touched && !s_down) {
         ESP_LOGI(TAG, "press at %.0f,%.0f (raw %u,%u)", tx, ty, x[0], y[0]);   /* where the finger lands, for mapping checks */
         audio_port_prewarm();                   /* the release's cue plays warm */
